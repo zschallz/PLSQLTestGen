@@ -66,6 +66,30 @@ class ProcVariable
   end
 end
 
+def generate_anon_block(procedureName, parameters)
+  named_param_assignments = Array.new
+  
+  anonBlock = ""
+  anonBlock << "DECLARE\n"
+  # Declare each local variable in PL/SQL and assign them default values if they're IN params
+  # Also, generate the named parameter assignments for the procedure call
+  parameters.each { |p|
+    anonBlock << "\t" + p.getVarDeclaration() + "\n"
+    named_param_assignments << p.get_named_param_assignment
+  }
+  # Begin anonymous block
+  anonBlock << "BEGIN\n"
+  # Construct a call to the procedure using the parameters.
+  anonBlock << "\t" + procedureName + "(\n"
+  anonBlock << "\t\t" + named_param_assignments.join(",\n\t\t") + "\n"
+  anonBlock << "\t);\n"
+  
+  # PL/SQL Finished
+  anonBlock << "END;\n"
+  
+  return anonBlock;
+end
+
 ARGV.each do |value|
   procString = value.downcase
 
@@ -74,7 +98,6 @@ ARGV.each do |value|
     procString 				= procString.gsub('procedure ', '')
     procedureName 			= procString[0,procString.index('(')]
     parameters 				= Array.new
-    named_param_assignments = Array.new
 
     puts "Procedure Name = " + procedureName
     # remove procedure name from procString after identification
@@ -97,23 +120,7 @@ ARGV.each do |value|
     }
 
     # Start outputting the script
-    puts 'DECLARE'
-    # Declare each local variable in PL/SQL and assign them default values if they're IN params
-    # Also, generate the named parameter assignments for the procedure call
-    parameters.each { |p|
-      puts "\t" + p.getVarDeclaration()
-      named_param_assignments << p.get_named_param_assignment
-    }
-    # Begin anonymous block
-    puts 'BEGIN'
-    # Construct a call to the procedure using the parameters.
-    puts "\t" + procedureName + "("
-    puts "\t\t" + named_param_assignments.join(",\n\t\t")
-    puts "\t);"
-
-    # PL/SQL Finished
-    puts 'END;'
-
+    puts generate_anon_block(procedureName, parameters)
   end
 
 end

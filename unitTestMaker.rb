@@ -10,7 +10,7 @@
 # --------------
 # Current status: Getting basic algorithm down (testing it) while learning Ruby. 60% complete.
 class ProcVariable
-  attr_accessor :procVarName, :procVarDataType, :procVarInOut
+  attr_accessor :name, :data_type, :in_out
 
   NUMERIC_TYPES = %w{
   number binary_integer dec
@@ -32,31 +32,31 @@ class ProcVariable
   DATE_TYPES = %w{
   date
   }
-  def initialize(procVarName, procVarDataType, procVarInOut)
-    @procVarName = procVarName.downcase
-    @procVarDataType = procVarDataType.downcase
-    @procVarInOut = procVarInOut.downcase
+  def initialize(name, data_type, in_out)
+    @name = name.downcase
+    @data_type = data_type.downcase
+    @in_out = in_out.downcase
   end
 
   def get_local_name()
-    return "v_" + @procVarName.gsub('p_', '')
+    return "v_" + @name.gsub('p_', '')
   end
 
   def get_named_param_assignment
-    return @procVarName + " => " + get_local_name
+    return @name + " => " + get_local_name
 
   end
 
   def getVarDeclaration
-    decStr = get_local_name() + " " + @procVarDataType
-    if @procVarInOut == 'out'
+    decStr = get_local_name() + " " + @data_type
+    if @in_out == 'out'
       decStr << ';'
     else
-      if NUMERIC_TYPES.include? @procVarDataType
+      if NUMERIC_TYPES.include? @data_type
         decStr << ' := 0;'
-      elsif CHAR_TYPES.include? @procVarDataType
+      elsif CHAR_TYPES.include? @data_type
         decStr << ' := \'\';'
-      elsif DATE_TYPES.include? @procVarDataType
+      elsif DATE_TYPES.include? @data_type
         decStr << ' := SYSDATE';
       else
         decStr << ';'

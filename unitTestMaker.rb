@@ -52,6 +52,7 @@ class ProcVariable
     if @in_out == 'out'
       decStr << ';'
     else
+      # IN and IN OUT parameters
       if NUMERIC_TYPES.include? @data_type
         decStr << ' := 0;'
       elsif CHAR_TYPES.include? @data_type
@@ -101,13 +102,16 @@ ARGV.each do |value|
 
     # remove procedure name from procString after identification
     procString = procString.gsub(procedureName, '')
-    # remove parenthesis - not used f|| detection... but later check if they are there
+    # remove parenthesis - not used for detection... but later check if they are there
     procString = procString.delete('()')
 
     # split parameter list by ','
     procString.split(',').each { |s|
     # for each parameter, split by ' in ' or ' out ' and identify param names and datatypes
-      if s.index(' in ') != nil
+      if s.index(' in out ') != nil
+        inOutParams = s.split(' in out ')
+        parameters << ProcVariable.new(inOutParams[0].strip, inOutParams[1].strip, 'in out')
+      elsif s.index(' in ') != nil
         inParams = s.split(' in ')
         parameters << ProcVariable.new(inParams[0].strip, inParams[1].strip, 'in')
       elsif s.index(' out ') != nil

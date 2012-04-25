@@ -96,10 +96,9 @@ ARGV.each do |value|
   if procString.index('procedure') == 0
     # remove procedure identifier from procString after identification
     procString 				= procString.gsub('procedure ', '')
-    procedureName 			= procString[0,procString.index('(')]
+    procedureName 		= procString[0,procString.index('(')]
     parameters 				= Array.new
 
-    puts "Procedure Name = " + procedureName
     # remove procedure name from procString after identification
     procString = procString.gsub(procedureName, '')
     # remove parenthesis - not used f|| detection... but later check if they are there
@@ -110,11 +109,9 @@ ARGV.each do |value|
     # for each parameter, split by ' in ' or ' out ' and identify param names and datatypes
       if s.index(' in ') != nil
         inParams = s.split(' in ')
-        puts "IN Param: " + s
         parameters << ProcVariable.new(inParams[0].strip, inParams[1].strip, 'in')
       elsif s.index(' out ') != nil
         outParams = s.split(' out ')
-        puts "OUT Param: " + s
         parameters << ProcVariable.new(outParams[0].strip, outParams[1].strip, 'out')
       end
     }

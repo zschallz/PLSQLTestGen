@@ -8,7 +8,7 @@
 #
 # Note: I made this script as a basic ruby learning project. Please excuse any weirdness.
 # --------------
-# Current status: Getting basic algorithm down (testing it) while learning Ruby. 60% complete.
+# Current status: Getting basic algorithm down (testing it) while learning Ruby. 60% complete
 class ProcVariable
   attr_accessor :name, :data_type, :in_out
 

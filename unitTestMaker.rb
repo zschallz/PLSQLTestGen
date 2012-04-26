@@ -13,24 +13,24 @@ class ProcVariable
   attr_accessor :name, :data_type, :in_out
 
   NUMERIC_TYPES = %w{
-  number binary_integer dec
-  double precision float
-  int integer natural
-  naturaln numeric pls_integer
-  positive positiven real
-  signtype smallint
+    number binary_integer dec
+    double precision float
+    int integer natural
+    naturaln numeric pls_integer
+    positive positiven real
+    signtype smallint
   }
 
   CHAR_TYPES = %w{
-  varchar2 char character
-  long long raw nchar
-  nvarchar2 raw rowid
-  string urowid varchar
-  varchar2
+    varchar2 char character
+    long long raw nchar
+    nvarchar2 raw rowid
+    string urowid varchar
+    varchar2
   }
 
   DATE_TYPES = %w{
-  date
+    date
   }
   def initialize(name, data_type, in_out)
     @name = name.downcase
@@ -91,14 +91,16 @@ def generate_anon_block(procedure_name, parameters)
   anon_block
 end
 
-ARGV.each do |value|
-  proc_string = value.downcase
+def process_procedure(string)
+  proc_string = string.downcase
+
 
   if proc_string.index('procedure') == 0
     # remove procedure identifier from proc_string after identification
     proc_string 				= proc_string.gsub('procedure ', '')
     procedure_name 		= proc_string[0,proc_string.index('(')]
     parameters 				= Array.new
+
 
     # remove procedure name from proc_string after identification
     proc_string = proc_string.gsub(procedure_name, '')
@@ -107,7 +109,7 @@ ARGV.each do |value|
 
     # split parameter list by ','
     proc_string.split(',').each { |s|
-    # for each parameter, split by ' in ' or ' out ' and identify param names and datatypes
+      # for each parameter, split by ' in ', ' out ', or ' in out ' and identify param names and datatypes
       if s.index(' in out ') != nil
         in_out_params = s.split(' in out ')
         parameters << ProcVariable.new(in_out_params[0].strip, in_out_params[1].strip, 'in out')
@@ -124,4 +126,8 @@ ARGV.each do |value|
     puts generate_anon_block(procedure_name, parameters)
   end
 
+end
+
+ARGV.each do |value|
+    process_procedure(value)
 end

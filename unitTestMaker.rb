@@ -39,89 +39,89 @@ class ProcVariable
   end
 
   def get_local_name()
-    return "v_" + @name.gsub('p_', '')
+    "v_" + @name.gsub('p_', '')
   end
 
   def get_named_param_assignment
-    return @name + " => " + get_local_name
+    @name + " => " + get_local_name
 
   end
 
-  def getVarDeclaration
-    decStr = get_local_name() + " " + @data_type
+  def get_var_declaration
+    dec_str = get_local_name() + " " + @data_type
     if @in_out == 'out'
-      decStr << ';'
+      dec_str << ';'
     else
       # IN and IN OUT parameters
       if NUMERIC_TYPES.include? @data_type
-        decStr << ' := 0;'
+        dec_str << ' := 0;'
       elsif CHAR_TYPES.include? @data_type
-        decStr << ' := \'\';'
+        dec_str << '(2048) := \'\';'
       elsif DATE_TYPES.include? @data_type
-        decStr << ' := SYSDATE';
+        dec_str << ' := SYSDATE'
       else
-        decStr << ';'
+        dec_str << ';'
       end
     end
-    return decStr
+    dec_str
   end
 end
 
-def generate_anon_block(procedureName, parameters)
+def generate_anon_block(procedure_name, parameters)
   named_param_assignments = Array.new
   
-  anonBlock = ""
-  anonBlock << "DECLARE\n"
+  anon_block = ""
+  anon_block << "DECLARE\n"
   # Declare each local variable in PL/SQL and assign them default values if they're IN params
   # Also, generate the named parameter assignments for the procedure call
   parameters.each { |p|
-    anonBlock << "\t" + p.getVarDeclaration() + "\n"
+    anon_block << "\t" + p.get_var_declaration() + "\n"
     named_param_assignments << p.get_named_param_assignment
   }
   # Begin anonymous block
-  anonBlock << "BEGIN\n"
+  anon_block << "BEGIN\n"
   # Construct a call to the procedure using the parameters.
-  anonBlock << "\t" + procedureName + "(\n"
-  anonBlock << "\t\t" + named_param_assignments.join(",\n\t\t") + "\n"
-  anonBlock << "\t);\n"
+  anon_block << "\t" + procedure_name + "(\n"
+  anon_block << "\t\t" + named_param_assignments.join(",\n\t\t") + "\n"
+  anon_block << "\t);\n"
   
   # PL/SQL Finished
-  anonBlock << "END;\n"
+  anon_block << "END;\n"
   
-  return anonBlock;
+  anon_block
 end
 
 ARGV.each do |value|
-  procString = value.downcase
+  proc_string = value.downcase
 
-  if procString.index('procedure') == 0
-    # remove procedure identifier from procString after identification
-    procString 				= procString.gsub('procedure ', '')
-    procedureName 		= procString[0,procString.index('(')]
+  if proc_string.index('procedure') == 0
+    # remove procedure identifier from proc_string after identification
+    proc_string 				= proc_string.gsub('procedure ', '')
+    procedure_name 		= proc_string[0,proc_string.index('(')]
     parameters 				= Array.new
 
-    # remove procedure name from procString after identification
-    procString = procString.gsub(procedureName, '')
+    # remove procedure name from proc_string after identification
+    proc_string = proc_string.gsub(procedure_name, '')
     # remove parenthesis - not used for detection... but later check if they are there
-    procString = procString.delete('()')
+    proc_string = proc_string.delete('()')
 
     # split parameter list by ','
-    procString.split(',').each { |s|
+    proc_string.split(',').each { |s|
     # for each parameter, split by ' in ' or ' out ' and identify param names and datatypes
       if s.index(' in out ') != nil
-        inOutParams = s.split(' in out ')
-        parameters << ProcVariable.new(inOutParams[0].strip, inOutParams[1].strip, 'in out')
+        in_out_params = s.split(' in out ')
+        parameters << ProcVariable.new(in_out_params[0].strip, in_out_params[1].strip, 'in out')
       elsif s.index(' in ') != nil
-        inParams = s.split(' in ')
-        parameters << ProcVariable.new(inParams[0].strip, inParams[1].strip, 'in')
+        in_params = s.split(' in ')
+        parameters << ProcVariable.new(in_params[0].strip, in_params[1].strip, 'in')
       elsif s.index(' out ') != nil
-        outParams = s.split(' out ')
-        parameters << ProcVariable.new(outParams[0].strip, outParams[1].strip, 'out')
+        out_params = s.split(' out ')
+        parameters << ProcVariable.new(out_params[0].strip, out_params[1].strip, 'out')
       end
     }
 
     # Start outputting the script
-    puts generate_anon_block(procedureName, parameters)
+    puts generate_anon_block(procedure_name, parameters)
   end
 
 end

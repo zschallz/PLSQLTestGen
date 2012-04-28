@@ -9,7 +9,7 @@
 # Note: I made this script as a basic ruby learning project. Please excuse any weirdness.
 # --------------
 # Current status: Getting basic algorithm down (testing it) while learning Ruby. 60% complete
-class ProcVariable
+class PLVariable
   attr_accessor :name, :data_type, :in_out
 
   NUMERIC_TYPES = %w{
@@ -33,9 +33,9 @@ class ProcVariable
     date
   }
   def initialize(name, data_type, in_out)
-    @name = name.downcase
-    @data_type = data_type.downcase
-    @in_out = in_out.downcase
+    @name       = name.downcase
+    @data_type  = data_type.downcase
+    @in_out     = in_out.downcase
   end
 
   def get_local_name()
@@ -44,7 +44,6 @@ class ProcVariable
 
   def get_named_param_assignment
     @name + " => " + get_local_name
-
   end
 
   def get_var_declaration
@@ -58,7 +57,7 @@ class ProcVariable
       elsif CHAR_TYPES.include? @data_type
         dec_str << '(2048) := \'\';'
       elsif DATE_TYPES.include? @data_type
-        dec_str << ' := SYSDATE'
+        dec_str << ' := SYSDATE;'
       else
         dec_str << ';'
       end
@@ -67,67 +66,83 @@ class ProcVariable
   end
 end
 
-def generate_anon_block(procedure_name, parameters)
-  named_param_assignments = Array.new
-  
-  anon_block = ""
-  anon_block << "DECLARE\n"
-  # Declare each local variable in PL/SQL and assign them default values if they're IN params
-  # Also, generate the named parameter assignments for the procedure call
-  parameters.each { |p|
-    anon_block << "\t" + p.get_var_declaration() + "\n"
-    named_param_assignments << p.get_named_param_assignment
-  }
-  # Begin anonymous block
-  anon_block << "BEGIN\n"
-  # Construct a call to the procedure using the parameters.
-  anon_block << "\t" + procedure_name + "(\n"
-  anon_block << "\t\t" + named_param_assignments.join(",\n\t\t") + "\n"
-  anon_block << "\t);\n"
-  
-  # PL/SQL Finished
-  anon_block << "END;\n"
-  
-  anon_block
-end
+class PLProcedure
+  attr_accessor :name, :parameters, :type
 
-def process_procedure(string)
-  proc_string = string.downcase
+  def initialize(name, parameters, type)
+    @name           = name.downcase
+    @parameters     = parameters
+    if %w[procedure function].include? type.downcase
+      @type         = type.downcase
+    else
+      raise ArgumentError, 'Expected type of function or procedure, but got: ' << type
+    end
+  end
 
-
-  if proc_string.index('procedure') == 0
+  # Takes a string of a procedure signature and creates a PLProcedure Method for it.
+  def self.process_procedure(string)
+    proc_string       = string.downcase
     # remove procedure identifier from proc_string after identification
-    proc_string 				= proc_string.gsub('procedure ', '')
+    proc_string 			= proc_string.gsub('procedure ', '')
     procedure_name 		= proc_string[0,proc_string.index('(')]
     parameters 				= Array.new
 
 
     # remove procedure name from proc_string after identification
-    proc_string = proc_string.gsub(procedure_name, '')
+    proc_string       = proc_string.gsub(procedure_name, '')
     # remove parenthesis - not used for detection... but later check if they are there
-    proc_string = proc_string.delete('()')
+    proc_string       = proc_string.delete('()')
 
     # split parameter list by ','
     proc_string.split(',').each { |s|
       # for each parameter, split by ' in ', ' out ', or ' in out ' and identify param names and datatypes
       if s.index(' in out ') != nil
         in_out_params = s.split(' in out ')
-        parameters << ProcVariable.new(in_out_params[0].strip, in_out_params[1].strip, 'in out')
+        parameters    << PLVariable.new(in_out_params[0].strip, in_out_params[1].strip, 'in out')
       elsif s.index(' in ') != nil
-        in_params = s.split(' in ')
-        parameters << ProcVariable.new(in_params[0].strip, in_params[1].strip, 'in')
+        in_params     = s.split(' in ')
+        parameters    << PLVariable.new(in_params[0].strip, in_params[1].strip, 'in')
       elsif s.index(' out ') != nil
-        out_params = s.split(' out ')
-        parameters << ProcVariable.new(out_params[0].strip, out_params[1].strip, 'out')
+        out_params    = s.split(' out ')
+        parameters    << PLVariable.new(out_params[0].strip, out_params[1].strip, 'out')
       end
     }
 
     # Start outputting the script
-    puts generate_anon_block(procedure_name, parameters)
+    #puts generate_anon_block(procedure_name, parameters)
+    PLProcedure.new(procedure_name, parameters, 'procedure')
+
+  end
+
+  def generate_anon_block()
+    named_param_assignments = Array.new
+
+    anon_block = ""
+    anon_block << "DECLARE\n"
+    # Declare each local variable in PL/SQL and assign them default values if they're IN params
+    # Also, generate the named parameter assignments for the procedure call
+    @parameters.each { |p|
+      anon_block << "\t" + p.get_var_declaration() + "\n"
+      named_param_assignments << p.get_named_param_assignment
+    }
+    # Begin anonymous block
+    anon_block << "BEGIN\n"
+    # Construct a call to the procedure using the parameters.
+    anon_block << "\t" + @name + "(\n"
+    anon_block << "\t\t" + named_param_assignments.join(",\n\t\t") + "\n"
+    anon_block << "\t);\n"
+
+    # Anon Block Finished
+    anon_block << "END;\n"
+
+    anon_block
   end
 
 end
 
 ARGV.each do |value|
-    process_procedure(value)
+  procedure = PLProcedure.process_procedure(value.delete(';'))
+
+  #puts procedure.parameters.size
+  puts procedure.generate_anon_block
 end

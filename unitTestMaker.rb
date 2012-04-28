@@ -114,6 +114,7 @@ class PLProcedure
 
   end
 
+  # Returns an anonymous block for this procedure as a string.
   def generate_anon_block()
     named_param_assignments = Array.new
 
@@ -138,11 +139,35 @@ class PLProcedure
     anon_block
   end
 
+  def write_anon_block_to_file(filename)
+    file = File.new(filename, "w")
+
+    file.puts(generate_anon_block)
+    file.close
+  end
 end
 
 ARGV.each do |value|
   procedure = PLProcedure.process_procedure(value.delete(';'))
 
-  #puts procedure.parameters.size
-  puts procedure.generate_anon_block
+  filename = procedure.name + '.sql'
+
+  if File.exists?(filename)
+    puts "File '" + filename + "' already exists. Overwrite? (y/N)"
+    overwrite = STDIN.gets
+    overwrite.chomp!
+
+    if overwrite == 'y'
+      procedure.write_anon_block_to_file(filename)
+      puts procedure.name + " generated."
+    else
+      puts procedure.name + " skipped."
+    end
+
+  else
+    procedure.write_anon_block_to_file(filename)
+    puts procedure.name + " generated."
+  end
+
+  #puts procedure.generate_anon_block
 end

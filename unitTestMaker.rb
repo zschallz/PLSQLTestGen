@@ -115,7 +115,7 @@ class PLProcedure
   end
 
   # Returns an anonymous block for this procedure as a string.
-  def generate_anon_block()
+  def generate_anon_block(package_name)
     named_param_assignments = Array.new
 
     anon_block = ""
@@ -129,7 +129,7 @@ class PLProcedure
     # Begin anonymous block
     anon_block << "BEGIN\n"
     # Construct a call to the procedure using the parameters.
-    anon_block << "\t" + @name + "(\n"
+    anon_block << "\t" + package_name + "." + @name + "(\n"
     anon_block << "\t\t" + named_param_assignments.join(",\n\t\t") + "\n"
     anon_block << "\t);\n"
 
@@ -139,10 +139,10 @@ class PLProcedure
     anon_block
   end
 
-  def write_anon_block_to_file(filename)
+  def write_anon_block_to_file(filename, package_name)
     file = File.new(filename, "w")
 
-    file.puts(generate_anon_block)
+    file.puts(generate_anon_block(package_name))
     file.close
   end
 end
@@ -169,9 +169,7 @@ class PackageSpec
     # read file line by line
     while( line = file.gets )
       line_num += 1
-      puts "line #" + line_num.to_s
       if parsing_name
-        puts "Already parsing name"
         temp_line = line
         # Get next word
         package_name = temp_line.split(' ')[0]
@@ -247,28 +245,33 @@ end
 
 pkg_spec = PackageSpec.parse_package_spec(File.new("example/test2.pks"))
 pkg_spec.procedures.each { |p|
-  p.write_anon_block_to_file(pkg_spec.name + "." + p.name + ".sql")
+  p.write_anon_block_to_file(pkg_spec.name + "." + p.name + ".sql",pkg_spec.name)
 }
 
+if ARGV.size == 0
+  puts "Please input valid package bodies you wish to process as arguments."
+end
+
 ARGV.each do |value|
-  procedure = PLProcedure.process_procedure(value.delete(';'))
+  pkg_spec = PackageSpec.parse_package_spec(File.new(value))
+  pkg_spec.procedures.each { |p|
+    filename = pkg_spec.name + "." + p.name + ".sql"
 
-  filename = procedure.name + '.sql'
+    if File.exists?(filename)
+      puts "File '" + filename + "' already exists. Overwrite? (y/N)"
+      overwrite = STDIN.gets
+      overwrite.chomp!
 
-  if File.exists?(filename)
-    puts "File '" + filename + "' already exists. Overwrite? (y/N)"
-    overwrite = STDIN.gets
-    overwrite.chomp!
+      if overwrite == 'y'
+        p.write_anon_block_to_file(filename, pkg_spec.name)
+        puts p.name + " generated."
+      else
+        puts p.name + " skipped."
+      end
 
-    if overwrite == 'y'
-      procedure.write_anon_block_to_file(filename)
-      puts procedure.name + " generated."
     else
-      puts procedure.name + " skipped."
+      p.write_anon_block_to_file(filename, pkg_spec.name)
+      puts p.name + " generated."
     end
-
-  else
-    procedure.write_anon_block_to_file(filename)
-    puts procedure.name + " generated."
-  end
+  }
 end

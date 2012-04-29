@@ -151,20 +151,48 @@ class PackageSpec
 
   attr_accessor :name, :procedures
 
-  def initialize(name, parameters)
+  def initialize(name, procedures)
     @name           = name.downcase
-    @procedures     = parameters
+    @procedures     = procedures
   end
 
   # Takes an open file object representing a package specification and reads it line by line to find procedures.
   def self.parse_package_spec(file)
     procedures = Array.new
     proc_string = ''
-    parsing_object = false
+    parsing_object  = false
+    parsing_name    = false
+    procedure_name  = nil
+    package_name    = nil
     line_num = 0
 
     # read file line by line
     while( line = file.gets )
+      line_num += 1
+      puts "line #" + line_num.to_s
+      if parsing_name
+        puts "Already parsing name"
+        temp_line = line
+        # Get next word
+        package_name = temp_line.split(' ')[0]
+        parsing_name = false
+      else
+        # If procedure name has not yet been parsed, we are not currently parsing, and we find the word package
+        if package_name == nil && parsing_name == false &&  line.index('package ')
+          parsing_name = true
+
+          temp_line = line
+          # Remove 'package' from the line strip and strip any white spaces left over before the next word
+          temp_line = temp_line.gsub('package', "")
+          temp_line = temp_line.lstrip
+
+          # Get next word on line. If it does not exist, nil should be returned
+          package_name = temp_line.split(' ')[0]
+          if package_name != nil
+            parsing_name = false
+          end
+        end
+      end
       # when we find 'procedure ' or 'function ' and not already parsing an object
       # ignore keywords procedure and function if already processing so that variable/object names don't throw us off
       if parsing_object == false
@@ -189,9 +217,10 @@ class PackageSpec
           # TODO: check to see if there's another procedure after ; on the same line.
         end
       end
-
     end
 
+    PackageSpec.new(package_name, procedures)
+    #puts "package name = " + package_name
     # File full read... Create PackageSpec object and return it
 
   end
@@ -217,6 +246,9 @@ class PackageSpec
 end
 
 pkg_spec = PackageSpec.parse_package_spec(File.new("example/test2.pks"))
+pkg_spec.procedures.each { |p|
+  p.write_anon_block_to_file(pkg_spec.name + "." + p.name + ".sql")
+}
 
 ARGV.each do |value|
   procedure = PLProcedure.process_procedure(value.delete(';'))

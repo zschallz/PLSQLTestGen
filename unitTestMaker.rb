@@ -71,7 +71,7 @@ class PLProcedure
 
   def initialize(name, parameters, type)
     @name           = name.downcase
-    @parameters     = parameters
+    @procedures     = parameters
     if %w[procedure function].include? type.downcase
       @type         = type.downcase
     else
@@ -122,7 +122,7 @@ class PLProcedure
     anon_block << "DECLARE\n"
     # Declare each local variable in PL/SQL and assign them default values if they're IN params
     # Also, generate the named parameter assignments for the procedure call
-    @parameters.each { |p|
+    @procedures.each { |p|
       anon_block << "\t" + p.get_var_declaration() + "\n"
       named_param_assignments << p.get_named_param_assignment
     }
@@ -147,6 +147,77 @@ class PLProcedure
   end
 end
 
+class PackageSpec
+
+  attr_accessor :name, :procedures
+
+  def initialize(name, parameters)
+    @name           = name.downcase
+    @procedures     = parameters
+  end
+
+  # Takes an open file object representing a package specification and reads it line by line to find procedures.
+  def self.parse_package_spec(file)
+    procedures = Array.new
+    proc_string = ''
+    parsing_object = false
+    line_num = 0
+
+    # read file line by line
+    while( line = file.gets )
+      # when we find 'procedure ' or 'function ' and not already parsing an object
+      # ignore keywords procedure and function if already processing so that variable/object names don't throw us off
+      if parsing_object == false
+        if line.index('procedure ') != nil || line.index('function ') != nil
+          # start storing the pl/sql object signature until we find ;
+          parsing_object = true
+          if line.index(';') == nil
+            proc_string << line
+          else
+            proc_string << first_line_until_semicolon(line)
+          end
+        end
+      else
+        # ; found. Create the PLProcedure Object.
+        if line.index(';') == nil
+          proc_string << line
+        else
+          parsing_object = false
+          proc_string << line[0,line.index(';')]
+          procedures.push(PLProcedure.process_procedure(proc_string.delete(';')))
+          proc_string = ''
+          # TODO: check to see if there's another procedure after ; on the same line.
+        end
+      end
+
+    end
+
+    # File full read... Create PackageSpec object and return it
+
+  end
+
+  def self.first_line_until_semicolon(str)
+    proc_string  = ''
+
+    if str.index(';') == nil
+      proc_string << str
+    else
+      # if procedure or function is found in the same line as ';', start the string slice there, otherwise start at index 0.
+      if str.index('procedure ') != nil
+        start_index = str.index('procedure ')
+      else # line.index('function ') != nil
+        start_index = str.index('function ')
+      end
+      proc_string = str[start_index,str.index(';')]
+    end
+           puts 'finished first line = ' + proc_string
+    proc_string
+  end
+
+end
+
+pkg_spec = PackageSpec.parse_package_spec(File.new("example/test2.pks"))
+
 ARGV.each do |value|
   procedure = PLProcedure.process_procedure(value.delete(';'))
 
@@ -168,6 +239,4 @@ ARGV.each do |value|
     procedure.write_anon_block_to_file(filename)
     puts procedure.name + " generated."
   end
-
-  #puts procedure.generate_anon_block
 end
